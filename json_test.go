@@ -42,15 +42,97 @@ func TestPickOmit(t *testing.T) {
 		if string(omitData) != `{"arr":[1,"2",true],"b":false,"f":1.12,"i":1,"m":{"a":1,"b":"2","c":false},"s":"\"abc","中文":"名称"}` {
 			t.Fatalf("json omit fail")
 		}
-
 	})
+}
 
+func BenchmarkPick(b *testing.B) {
+	b.ReportAllocs()
+	m := map[string]interface{}{
+		"i": 1,
+		"f": 1.12,
+		"s": "\"abc",
+		"b": false,
+		"arr": []interface{}{
+			1,
+			"2",
+			true,
+		},
+		"m": map[string]interface{}{
+			"a": 1,
+			"b": "2",
+			"c": false,
+		},
+		"null": nil,
+		"中文":   "名称",
+	}
+	buf, _ := json.Marshal(m)
+	fields := strings.Split("i,f,s,b,arr,m,null,中文", ",")
+	for i := 0; i < b.N; i++ {
+		Pick(buf, fields)
+	}
+}
+
+func BenchmarkOmit(b *testing.B) {
+	b.ReportAllocs()
+	m := map[string]interface{}{
+		"i": 1,
+		"f": 1.12,
+		"s": "\"abc",
+		"b": false,
+		"arr": []interface{}{
+			1,
+			"2",
+			true,
+		},
+		"m": map[string]interface{}{
+			"a": 1,
+			"b": "2",
+			"c": false,
+		},
+		"null": nil,
+		"中文":   "名称",
+	}
+	buf, _ := json.Marshal(m)
+	fields := strings.Split("i,f,s,b", ",")
+	for i := 0; i < b.N; i++ {
+		Omit(buf, fields)
+	}
+}
+
+func BenchmarkCutWords(b *testing.B) {
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		cutWords("book_name")
+	}
+}
+func BenchmarkCamelCase(b *testing.B) {
+	b.ReportAllocs()
+	json := []byte(`{
+		"book_name": "测试",
+		"book_price": 12,
+		"book_on_sale": true,
+		"book_author": {
+			"author_name": "tree.xie",
+			"author_age": 0,
+			"author_salary": 10.1,
+		},
+		"book_category": ["vip", "hot-sale"],
+		"book_infos": [
+			{
+				"word_count": 100
+			}
+		]
+	}`)
+	for i := 0; i < b.N; i++ {
+		CamelCase(json)
+	}
 }
 
 func TestCamelCase(t *testing.T) {
 	str := "fooBarBar"
 
 	checkList := []string{
+		"_foo_bar_bar_",
 		"fooBarBar",
 		"foo_bar_bar",
 		"foo bar bar",
@@ -65,6 +147,8 @@ func TestCamelCase(t *testing.T) {
 func TestSnakeCase(t *testing.T) {
 	str := "foo_bar_bar"
 	checkList := []string{
+		"_fooBarBar_",
+		"fooBarBar",
 		"fooBarBar",
 		"FooBarBar",
 	}

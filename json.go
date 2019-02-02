@@ -3,6 +3,7 @@ package superjson
 import (
 	"bytes"
 	"strings"
+	"unicode"
 
 	"github.com/tidwall/gjson"
 )
@@ -12,26 +13,33 @@ type (
 	Convert func(string) string
 )
 
+const (
+	underscoreRune = '_'
+	spaceRune      = ' '
+)
+
 func cutWords(str string) []string {
 	result := make([]string, 0, 10)
-	indexList := (cutWordsReg.FindAllStringIndex(str, -1))
-	currentIndex := 0
-	prefix := ""
-	for _, items := range indexList {
-		start := items[0]
-		if start == 0 {
+
+	currentCutIndex := 0
+	for index, ch := range str {
+		if ch == underscoreRune ||
+			ch == spaceRune {
+			if currentCutIndex != index {
+				result = append(result, str[currentCutIndex:index])
+			}
+			currentCutIndex = index + 1
+		}
+		if index == 0 || !unicode.IsUpper(ch) {
 			continue
 		}
-		end := items[1]
-
-		result = append(result, prefix+str[currentIndex:start])
-		tmp := str[start:end]
-		prefix = omitReg.ReplaceAllString(tmp, "")
-
-		currentIndex = end
+		if currentCutIndex != index {
+			result = append(result, str[currentCutIndex:index])
+			currentCutIndex = index
+		}
 	}
-	if currentIndex != len(str) {
-		result = append(result, prefix+str[currentIndex:])
+	if currentCutIndex < len(str)-1 {
+		result = append(result, str[currentCutIndex:])
 	}
 	return result
 }
