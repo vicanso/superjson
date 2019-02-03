@@ -127,45 +127,63 @@ func snakeCase(str string) string {
 	return strings.Join(result, "")
 }
 
-func convertJSON(t gjson.Result, fn KeyConvert) string {
-	json := make([]string, 0)
+func convertJSON(t gjson.Result, fn KeyConvert, builder *strings.Builder) {
 	isArray := t.IsArray()
-	iterator := func(key, value gjson.Result) bool {
-		k := fn(key.String())
-		var valueStr string
-		if value.IsObject() || value.IsArray() {
-			valueStr = convertJSON(value, fn)
-		} else {
-			valueStr = value.Raw
-		}
-		v := ""
-		// 如果数组，则没有key
-		if isArray {
-			v = valueStr
-		} else {
-			v = `"` + k + `":` + valueStr
-		}
-		json = append(json, v)
-		return true
-	}
-	t.ForEach(iterator)
-	joinJSON := strings.Join(json, ",")
+
 	if isArray {
-		return "[" + joinJSON + "]"
+		builder.WriteString("[")
+	} else {
+		builder.WriteString("{")
 	}
-	return "{" + joinJSON + "}"
+
+	index := 0
+	t.ForEach(func(key, value gjson.Result) bool {
+		if index != 0 {
+			builder.WriteString(",")
+		}
+		k := fn(key.String())
+		// 如果有key，则设置key
+		if k != "" {
+			builder.WriteString(`"`)
+			builder.WriteString(k)
+			builder.WriteString(`":`)
+		}
+
+		// 如果是array或者object，则递归
+		if value.IsArray() || value.IsObject() {
+			convertJSON(value, fn, builder)
+		} else {
+			builder.WriteString(value.Raw)
+		}
+
+		index++
+		return true
+	})
+	if isArray {
+		builder.WriteString("]")
+	} else {
+		builder.WriteString("}")
+	}
+}
+
+func createBuilder() *strings.Builder {
+	builder := new(strings.Builder)
+	builder.Grow(4096)
+	return builder
 }
 
 // CamelCase convert json to camel case
 func CamelCase(buf []byte) []byte {
+	builder := createBuilder()
 	result := gjson.ParseBytes(buf)
-	json := convertJSON(result, camelCase)
-	return []byte(json)
+	convertJSON(result, camelCase, builder)
+	return []byte(builder.String())
 }
 
 // SnakeCase convert json to snake case
 func SnakeCase(buf []byte) []byte {
+	builder := createBuilder()
 	result := gjson.ParseBytes(buf)
-	json := convertJSON(result, snakeCase)
-	return []byte(json)
+	convertJSON(result, snakeCase, builder)
+	return []byte(builder.String())
 }
