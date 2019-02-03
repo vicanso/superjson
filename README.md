@@ -38,6 +38,30 @@ data := superjson.Omit(buf, []string{
 fmt.Println(string(data))
 ```
 
+## Filter
+
+```go
+buf := []byte(`{
+  "name": "tree.xie",
+  "address": "GZ",
+  "no": 123
+}`)
+data := superjson.Filter(buf, func(key string) (omit bool, newKey string) {
+  // omit the no
+  if key == "no" {
+    return true, ""
+  }
+  // convert the address to addr
+  if key == "address" {
+    return false, "addr"
+  }
+  // key original
+  return false, key
+})
+// {"name":"tree.xie","addr":"GZ"}
+fmt.Println(string(data))
+```
+
 ## CamelCase
 
 ```go

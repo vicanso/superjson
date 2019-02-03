@@ -9,8 +9,10 @@ import (
 )
 
 type (
-	// Convert key convert function
-	Convert func(string) string
+	// KeyConvert key convert function
+	KeyConvert func(string) string
+	// KeyFilter key filter function
+	KeyFilter func(string) (omit bool, newKey string)
 )
 
 const (
@@ -44,26 +46,25 @@ func cutWords(str string) []string {
 	return result
 }
 
-// Pick pick fields from json
-func Pick(buf []byte, fields []string) []byte {
-	result := gjson.GetManyBytes(buf, fields...)
-	max := len(result)
-	arr := make([][]byte, max)
-	currentIndex := 0
-	for index, item := range result {
-		raw := item.Raw
-		// nil的数据忽略
-		if item.Type == gjson.Null {
-			continue
+// Filter json filter
+func Filter(buf []byte, filter KeyFilter) []byte {
+	result := gjson.ParseBytes(buf)
+	arr := make([][]byte, 0, 10)
+	result.ForEach(func(key, value gjson.Result) bool {
+		k := key.String()
+		omit, newKey := filter(k)
+		if omit {
+			return true
 		}
-		arr[currentIndex] = []byte(`"` + fields[index] + `":` + raw)
-		currentIndex++
-	}
-	// 如果部分数据跳过，则裁剪数组
-	if currentIndex != max {
-		arr = arr[0:currentIndex]
-	}
-
+		if newKey != "" {
+			k = newKey
+		}
+		if value.Type == gjson.Null {
+			return true
+		}
+		arr = append(arr, []byte(`"`+k+`":`+value.Raw))
+		return true
+	})
 	data := bytes.Join(arr, []byte(","))
 	data = bytes.Join([][]byte{
 		[]byte("{"),
@@ -73,22 +74,26 @@ func Pick(buf []byte, fields []string) []byte {
 	return data
 }
 
+// Pick pick fields from json
+func Pick(buf []byte, fields []string) []byte {
+	pickKeys := make(map[string]bool)
+	for _, key := range fields {
+		pickKeys[key] = true
+	}
+	return Filter(buf, func(k string) (bool, string) {
+		return !pickKeys[k], k
+	})
+}
+
 // Omit omit fields from json
 func Omit(buf []byte, fields []string) []byte {
-	newFields := make([]string, 0, 10)
 	omitKeys := make(map[string]bool)
 	for _, key := range fields {
 		omitKeys[key] = true
 	}
-	result := gjson.ParseBytes(buf)
-	result.ForEach(func(key, value gjson.Result) bool {
-		k := key.String()
-		if !omitKeys[k] {
-			newFields = append(newFields, k)
-		}
-		return true
+	return Filter(buf, func(k string) (bool, string) {
+		return omitKeys[k], k
 	})
-	return Pick(buf, newFields)
 }
 
 // camelCase convert string to camel case
@@ -122,7 +127,7 @@ func snakeCase(str string) string {
 	return strings.Join(result, "")
 }
 
-func convertJSON(t gjson.Result, fn Convert) string {
+func convertJSON(t gjson.Result, fn KeyConvert) string {
 	json := make([]string, 0)
 	isArray := t.IsArray()
 	iterator := func(key, value gjson.Result) bool {

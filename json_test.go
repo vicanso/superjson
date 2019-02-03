@@ -33,7 +33,7 @@ func TestPickOmit(t *testing.T) {
 	buf, _ := json.Marshal(m)
 	t.Run("pick", func(t *testing.T) {
 		pickData := Pick(buf, strings.Split("i,f,s,b,arr,m,null,中文", ","))
-		if string(pickData) != `{"i":1,"f":1.12,"s":"\"abc","b":false,"arr":[1,"2",true],"m":{"a":1,"b":"2","c":false},"中文":"名称"}` {
+		if string(pickData) != `{"arr":[1,"2",true],"b":false,"f":1.12,"i":1,"m":{"a":1,"b":"2","c":false},"s":"\"abc","中文":"名称"}` {
 			t.Fatalf("json pick fail")
 		}
 	})
