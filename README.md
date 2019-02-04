@@ -46,7 +46,7 @@ buf := []byte(`{
   "address": "GZ",
   "no": 123
 }`)
-data := superjson.Filter(buf, func(key string) (omit bool, newKey string) {
+data := superjson.Filter(buf, func(key, _ string) (omit bool, newKey string) {
   // omit the no
   if key == "no" {
     return true, ""
@@ -61,6 +61,26 @@ data := superjson.Filter(buf, func(key string) (omit bool, newKey string) {
 // {"name":"tree.xie","addr":"GZ"}
 fmt.Println(string(data))
 ```
+
+## Mask
+
+```go
+buf := []byte(`{
+  "name": "tree.xie",
+  "address": "GZ",
+  "no": 123
+}`)
+data := superjson.Mask(buf, func(key, _ string) (newValue string) {
+  // mask the no
+  if key == "no" {
+    return `"***"`
+  }
+  return ""
+})
+// {"name":"tree.xie","address":"GZ","no":"***"}
+fmt.Println(string(data))
+```
+
 
 ## CamelCase
 

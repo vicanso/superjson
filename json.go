@@ -12,7 +12,9 @@ type (
 	// KeyConvert key convert function
 	KeyConvert func(string) string
 	// KeyFilter key filter function
-	KeyFilter func(string) (omit bool, newKey string)
+	KeyFilter func(key, value string) (omit bool, newKey string)
+	// ValueMask value mask function
+	ValueMask func(key, value string) (newValue string)
 )
 
 const (
@@ -46,23 +48,32 @@ func cutWords(str string) []string {
 	return result
 }
 
-// Filter json filter
-func Filter(buf []byte, filter KeyFilter) []byte {
+func doJSON(buf []byte, filter KeyFilter, mask ValueMask) []byte {
 	result := gjson.ParseBytes(buf)
 	arr := make([][]byte, 0, 10)
 	result.ForEach(func(key, value gjson.Result) bool {
 		k := key.String()
-		omit, newKey := filter(k)
-		if omit {
-			return true
-		}
-		if newKey != "" {
-			k = newKey
+		v := value.Raw
+		if filter != nil {
+			omit, newKey := filter(k, v)
+			if omit {
+				return true
+			}
+			if newKey != "" {
+				k = newKey
+			}
 		}
 		if value.Type == gjson.Null {
 			return true
 		}
-		arr = append(arr, []byte(`"`+k+`":`+value.Raw))
+		if mask != nil {
+			newValue := mask(k, v)
+			if newValue != "" {
+				v = newValue
+			}
+		}
+
+		arr = append(arr, []byte(`"`+k+`":`+v))
 		return true
 	})
 	data := bytes.Join(arr, []byte(","))
@@ -74,13 +85,23 @@ func Filter(buf []byte, filter KeyFilter) []byte {
 	return data
 }
 
+// Filter json filter
+func Filter(buf []byte, filter KeyFilter) []byte {
+	return doJSON(buf, filter, nil)
+}
+
+// Mask json mask
+func Mask(buf []byte, mask ValueMask) []byte {
+	return doJSON(buf, nil, mask)
+}
+
 // Pick pick fields from json
 func Pick(buf []byte, fields []string) []byte {
 	pickKeys := make(map[string]bool)
 	for _, key := range fields {
 		pickKeys[key] = true
 	}
-	return Filter(buf, func(k string) (bool, string) {
+	return Filter(buf, func(k, _ string) (bool, string) {
 		return !pickKeys[k], k
 	})
 }
@@ -91,7 +112,7 @@ func Omit(buf []byte, fields []string) []byte {
 	for _, key := range fields {
 		omitKeys[key] = true
 	}
-	return Filter(buf, func(k string) (bool, string) {
+	return Filter(buf, func(k, _ string) (bool, string) {
 		return omitKeys[k], k
 	})
 }

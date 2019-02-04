@@ -45,6 +45,37 @@ func TestPickOmit(t *testing.T) {
 	})
 }
 
+func TestMask(t *testing.T) {
+	m := map[string]interface{}{
+		"i": 1,
+		"f": 1.12,
+		"s": "\"abc",
+		"b": false,
+		"arr": []interface{}{
+			1,
+			"2",
+			true,
+		},
+		"m": map[string]interface{}{
+			"a": 1,
+			"b": "2",
+			"c": false,
+		},
+		"null": nil,
+		"中文":   "名称",
+	}
+	buf, _ := json.Marshal(m)
+	data := Mask(buf, func(key, _ string) string {
+		if key != "i" {
+			return `"***"`
+		}
+		return ""
+	})
+	if string(data) != `{"arr":"***","b":"***","f":"***","i":1,"m":"***","s":"***","中文":"***"}` {
+		t.Fatalf("mask json fail")
+	}
+}
+
 func BenchmarkPick(b *testing.B) {
 	b.ReportAllocs()
 	m := map[string]interface{}{
