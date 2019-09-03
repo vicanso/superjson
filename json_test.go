@@ -130,12 +130,6 @@ func BenchmarkOmit(b *testing.B) {
 	}
 }
 
-func BenchmarkCutWords(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		cutWords("book_name")
-	}
-}
 func BenchmarkCamelCase(b *testing.B) {
 	b.ReportAllocs()
 	json := []byte(`{
@@ -156,37 +150,6 @@ func BenchmarkCamelCase(b *testing.B) {
 	}`)
 	for i := 0; i < b.N; i++ {
 		CamelCase(json)
-	}
-}
-
-func TestCamelCase(t *testing.T) {
-	str := "fooBarBar"
-
-	checkList := []string{
-		"_foo_bar_bar_",
-		"fooBarBar",
-		"foo_bar_bar",
-		"foo bar bar",
-	}
-	for _, item := range checkList {
-		if camelCase(item) != str {
-			t.Fatalf("camel case fail")
-		}
-	}
-}
-
-func TestSnakeCase(t *testing.T) {
-	str := "foo_bar_bar"
-	checkList := []string{
-		"_fooBarBar_",
-		"fooBarBar",
-		"fooBarBar",
-		"FooBarBar",
-	}
-	for _, item := range checkList {
-		if snakeCase(item) != str {
-			t.Fatalf("snake case fail")
-		}
 	}
 }
 

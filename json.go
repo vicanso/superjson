@@ -3,8 +3,8 @@ package superjson
 import (
 	"bytes"
 	"strings"
-	"unicode"
 
+	"github.com/iancoleman/strcase"
 	"github.com/tidwall/gjson"
 )
 
@@ -16,37 +16,6 @@ type (
 	// ValueMask value mask function
 	ValueMask func(key, value string) (newValue string)
 )
-
-const (
-	underscoreRune = '_'
-	spaceRune      = ' '
-)
-
-func cutWords(str string) []string {
-	result := make([]string, 0, 10)
-
-	currentCutIndex := 0
-	for index, ch := range str {
-		if ch == underscoreRune ||
-			ch == spaceRune {
-			if currentCutIndex != index {
-				result = append(result, str[currentCutIndex:index])
-			}
-			currentCutIndex = index + 1
-		}
-		if index == 0 || !unicode.IsUpper(ch) {
-			continue
-		}
-		if currentCutIndex != index {
-			result = append(result, str[currentCutIndex:index])
-			currentCutIndex = index
-		}
-	}
-	if currentCutIndex < len(str)-1 {
-		result = append(result, str[currentCutIndex:])
-	}
-	return result
-}
 
 func doJSON(buf []byte, filter KeyFilter, mask ValueMask) []byte {
 	result := gjson.ParseBytes(buf)
@@ -117,37 +86,6 @@ func Omit(buf []byte, fields []string) []byte {
 	})
 }
 
-// camelCase convert string to camel case
-// https://github.com/lodash/lodash/blob/master/camelCase.js
-func camelCase(str string) string {
-	result := cutWords(str)
-	for index, item := range result {
-		if index == 0 {
-			// 第一个单词首字母小写
-			result[index] = strings.ToLower(item)
-		} else {
-			// 后续的单词首字母大写
-			result[index] = strings.ToUpper(item[0:1]) + strings.ToLower(item[1:])
-		}
-	}
-	return strings.Join(result, "")
-}
-
-// snakeCase convert string to snake case
-// https://github.com/lodash/lodash/blob/master/snakeCase.js
-func snakeCase(str string) string {
-	result := cutWords(str)
-	for index, item := range result {
-		word := strings.ToLower(item)
-		if index == 0 {
-			result[index] = word
-		} else {
-			result[index] = "_" + word
-		}
-	}
-	return strings.Join(result, "")
-}
-
 func convertJSON(t gjson.Result, fn KeyConvert, builder *strings.Builder) {
 	isArray := t.IsArray()
 
@@ -197,7 +135,7 @@ func createBuilder() *strings.Builder {
 func CamelCase(buf []byte) []byte {
 	builder := createBuilder()
 	result := gjson.ParseBytes(buf)
-	convertJSON(result, camelCase, builder)
+	convertJSON(result, strcase.ToLowerCamel, builder)
 	return []byte(builder.String())
 }
 
@@ -205,6 +143,6 @@ func CamelCase(buf []byte) []byte {
 func SnakeCase(buf []byte) []byte {
 	builder := createBuilder()
 	result := gjson.ParseBytes(buf)
-	convertJSON(result, snakeCase, builder)
+	convertJSON(result, strcase.ToSnake, builder)
 	return []byte(builder.String())
 }
