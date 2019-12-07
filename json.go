@@ -21,6 +21,11 @@ func doJSON(buf []byte, filter KeyFilter, mask ValueMask) []byte {
 	result := gjson.ParseBytes(buf)
 	arr := make([][]byte, 0, 10)
 	result.ForEach(func(key, value gjson.Result) bool {
+		// 对于数组内的元素
+		if key.Type == gjson.Null && value.Type == gjson.JSON {
+			arr = append(arr, doJSON([]byte(value.Raw), filter, mask))
+			return true
+		}
 		k := key.String()
 		v := value.Raw
 		if filter != nil {
@@ -46,11 +51,20 @@ func doJSON(buf []byte, filter KeyFilter, mask ValueMask) []byte {
 		return true
 	})
 	data := bytes.Join(arr, []byte(","))
-	data = bytes.Join([][]byte{
-		[]byte("{"),
-		data,
-		[]byte("}"),
-	}, nil)
+	if result.IsArray() {
+		data = bytes.Join([][]byte{
+			[]byte("["),
+			data,
+			[]byte("]"),
+		}, nil)
+	} else {
+		data = bytes.Join([][]byte{
+			[]byte("{"),
+			data,
+			[]byte("}"),
+		}, nil)
+	}
+
 	return data
 }
 
