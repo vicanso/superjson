@@ -1,6 +1,6 @@
 # super json
 
-[![Build Status](https://img.shields.io/travis/vicanso/superjson.svg?label=linux+build)](https://travis-ci.org/vicanso/superjson)
+[![Build Status](https://github.com/vicanso/superjson/workflows/Test/badge.svg)](https://github.com/vicanso/superjson/actions)
 
 
 JSON picker and converter.
