@@ -20,10 +20,15 @@ type (
 func doJSON(buf []byte, filter KeyFilter, mask ValueMask) []byte {
 	result := gjson.ParseBytes(buf)
 	arr := make([][]byte, 0, 10)
+	isArray := result.IsArray()
 	result.ForEach(func(key, value gjson.Result) bool {
 		// 对于数组内的元素
-		if key.Type == gjson.Null && value.Type == gjson.JSON {
-			arr = append(arr, doJSON([]byte(value.Raw), filter, mask))
+		if isArray {
+			if value.Type == gjson.JSON {
+				arr = append(arr, doJSON([]byte(value.Raw), filter, mask))
+			} else {
+				arr = append(arr, []byte(value.Raw))
+			}
 			return true
 		}
 		k := key.String()
@@ -51,7 +56,7 @@ func doJSON(buf []byte, filter KeyFilter, mask ValueMask) []byte {
 		return true
 	})
 	data := bytes.Join(arr, []byte(","))
-	if result.IsArray() {
+	if isArray {
 		data = bytes.Join([][]byte{
 			[]byte("["),
 			data,
@@ -114,12 +119,15 @@ func convertJSON(t gjson.Result, fn KeyConvert, builder *strings.Builder) {
 		if index != 0 {
 			builder.WriteString(",")
 		}
-		k := fn(key.String())
-		// 如果有key，则设置key
-		if k != "" {
-			builder.WriteString(`"`)
-			builder.WriteString(k)
-			builder.WriteString(`":`)
+		// 数组不需要生成key
+		if !isArray {
+			k := fn(key.String())
+			// 如果有key，则设置key
+			if k != "" {
+				builder.WriteString(`"`)
+				builder.WriteString(k)
+				builder.WriteString(`":`)
+			}
 		}
 
 		// 如果是array或者object，则递归

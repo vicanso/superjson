@@ -42,12 +42,12 @@ func TestPickOmit(t *testing.T) {
 	t.Run("pick array", func(t *testing.T) {
 		assert := assert.New(t)
 		data := []map[string]string{
-			map[string]string{
+			{
 				"name":  "foo",
 				"type":  "1",
 				"price": "1.11",
 			},
-			map[string]string{
+			{
 				"name":  "bar",
 				"type":  "2",
 				"price": "2.22",
